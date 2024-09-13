@@ -33,10 +33,11 @@ async function deleteSecret(uuid) {
 
 async function deleteExpiredSecrets() {
     try {
+        const now = new Date();
         const result = await Secret.destroy({
             where: {
                 expiration: {
-                    [Op.lt]: Sequelize.fn('NOW')
+                    [Op.lt]: now
                 }
             }
         });
