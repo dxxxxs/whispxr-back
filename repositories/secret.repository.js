@@ -1,4 +1,5 @@
 const Secret = require('../models/secret.model');
+const { Op, Sequelize } = require('sequelize');
 
 async function createSecret(secretData) {
     try {
