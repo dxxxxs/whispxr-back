@@ -20,7 +20,7 @@ exports.createSecret = async (req, res) => {
         const expirationDate = new Date(expiration);
 
         if (expirationDate <= currentDate) {
-            return res.status(500).json({ error: 'La fecha de expiracion es pasado al presente' });
+            return res.status(400).json({ error: 'La fecha de expiracion es pasado al presente' });
         }
 
         const secretData = {
@@ -34,7 +34,7 @@ exports.createSecret = async (req, res) => {
 
         const createdSecret = await secretRepository.createSecret(secretData);
 
-        res.status(200).json({ message: 'Secreto creado satisfactoriamente.', uuid: createdSecret.getDataValue('UUID')});
+        res.status(201).json({ message: 'Secreto creado satisfactoriamente.', uuid: createdSecret.getDataValue('UUID')});
 
     } catch (error) {
         res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
@@ -50,11 +50,15 @@ exports.getSecret = async (req, res) => {
 
         const secret = await secretRepository.getSecretByUUID(uuid);
 
+        if (!secret) {
+            return res.status(404).json({ error: 'Secreto no encontrado.' });
+        }
+
         const hashedPassword = secret.getDataValue("password");
         const passwordMatches = await bcrypt.compare(password, hashedPassword);
 
         if (!passwordMatches) {
-            return res.status(400).json({ error: 'Contraseña incorrecta.' });
+            return res.status(401).json({ error: 'Contraseña incorrecta.' });
         }
 
         const expiration = new Date(secret.getDataValue("expiration"));
@@ -62,7 +66,7 @@ exports.getSecret = async (req, res) => {
 
         if (expiration <= currentDate) {
             await secretRepository.deleteSecret(uuid);
-            return res.status(400).json({ error: 'La fecha de expiracion ha pasado' });
+            return res.status(410).json({ error: 'La fecha de expiracion ha pasado' });
         }
 
         const iv = secret.getDataValue("iv");
@@ -77,7 +81,7 @@ exports.getSecret = async (req, res) => {
 
         await secretRepository.deleteSecret(uuid);
 
-        res.status(200).json({ secret: decryptedSecret });
+        res.status(201).json({ secret: decryptedSecret });
 
     } catch (error) {
         res.status(500).json({ error: 'Ocurrió un error al solicitar el secreto: ', details: error.message });
