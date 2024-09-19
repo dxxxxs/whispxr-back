@@ -17,11 +17,12 @@ const corsOptions = {
   };
 
 app.use(cors(corsOptions));
+
 app.use(express.json());
 
 require("./routes")(app);
 
-const deleteExpiredSecretsTask = cron.schedule('*/5 * * * *', async () => {
+const deleteExpiredSecretsTask = cron.schedule('* * * * *', async () => {
     try {
         const deletedSecrets = await secretRepository.deleteExpiredSecrets();
     } catch (error) {
