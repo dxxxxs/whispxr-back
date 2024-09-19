@@ -11,8 +11,12 @@ const secretRepository = require('./repositories/secret.repository');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const corsOptions = {
+    origin: 'https://whispxr.onrender.com',
+    optionsSuccessStatus: 200
+  };
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 require("./routes")(app);
