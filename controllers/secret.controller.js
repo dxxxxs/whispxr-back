@@ -2,6 +2,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const encryption = require('../_utils/encryption');
 const secretRepository = require('../repositories/secret.repository');
+const counterRepository = require('../repositories/counter.repository');
 
 
 exports.createSecret = async (req, res) => {
@@ -34,7 +35,11 @@ exports.createSecret = async (req, res) => {
 
         const createdSecret = await secretRepository.createSecret(secretData);
 
-        res.status(201).json({ message: 'Secreto creado satisfactoriamente.', uuid: createdSecret.getDataValue('UUID')});
+        if (createdSecret) {
+            await counterRepository.incrementCounter();
+        }
+
+        res.status(201).json({ message: 'Secreto creado satisfactoriamente.', uuid: createdSecret.getDataValue('UUID') });
 
     } catch (error) {
         res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
