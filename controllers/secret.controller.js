@@ -6,17 +6,28 @@ const counterRepository = require('../repositories/counter.repository');
 
 const CreateSecret = require('../use-cases/create-secret.use-case');
 
+const ExpirationError = require('../error/expiration-error');
+
 exports.createSecret = async (req, res) => {
     try {
 
         const { secret, password, expiration } = req.body;
 
-        const createdSecret = new CreateSecret({ secret, password, expiration });
+        const createSecret = new CreateSecret();
 
-        res.status(201).json({ message: 'Secreto creado satisfactoriamente.', uuid: createdSecret.getDataValue('UUID') });
+        const createdSecret = await createSecret.run({ secret, password, expiration });
+
+        res.status(201).json({
+            message: 'Secreto creado satisfactoriamente.',
+            uuid: createdSecret.UUID
+        });
 
     } catch (error) {
-        res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
+        if (error instanceof ExpirationError) {
+            res.status(400).json({ error: error.message });
+        }else{
+            res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
+        }
 
     }
 };

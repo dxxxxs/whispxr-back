@@ -3,23 +3,24 @@ const secretRepository = require('../repositories/secret.repository');
 const counterRepository = require('../repositories/counter.repository');
 const encryption = require('../_utils/encryption');
 
+const ExpirationError = require('../error/expiration-error');
+
 class CreateSecret {
-
-    constructor({ secret, password, expiration }) { }
-
-    async run() {
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        const encryptedSecret = await encryption.encrypt(secret, password);
-        const uuid = crypto.randomUUID();
+    async run({ secret, password, expiration }) {
 
         const currentDate = new Date();
         const expirationDate = new Date(expiration);
 
         if (expirationDate <= currentDate) {
-            return res.status(400).json({ error: 'La fecha de expiracion es pasado al presente' });
+            throw new ExpirationError('La fecha de expiración no puede ser en el pasado');
         }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const encryptedSecret = await encryption.encrypt(secret, password);
+
+        const uuid = crypto.randomUUID();
 
         const secretData = {
             UUID: uuid,
@@ -28,7 +29,6 @@ class CreateSecret {
             password: hashedPassword,
             expiration: expirationDate,
         };
-
 
         const createdSecret = await secretRepository.createSecret(secretData);
 
