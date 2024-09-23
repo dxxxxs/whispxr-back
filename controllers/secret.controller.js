@@ -1,12 +1,9 @@
-const axios = require('axios');
-const bcrypt = require('bcrypt');
-const encryption = require('../_utils/encryption');
-const secretRepository = require('../repositories/secret.repository');
-const counterRepository = require('../repositories/counter.repository');
-
 const CreateSecret = require('../use-cases/create-secret.use-case');
+const GetSecret = require('../use-cases/get-secret.use-case');
 
 const ExpirationError = require('../error/expiration-error');
+const InvalidPasswordError = require('../error/invalid-password');
+const SecretNotFoundError = require('../error/secret-not-found');
 
 exports.createSecret = async (req, res) => {
     try {
@@ -17,16 +14,16 @@ exports.createSecret = async (req, res) => {
 
         const createdSecret = await createSecret.run({ secret, password, expiration });
 
-        res.status(201).json({
+        return res.status(200).json({
             message: 'Secreto creado satisfactoriamente.',
             uuid: createdSecret.UUID
         });
 
     } catch (error) {
         if (error instanceof ExpirationError) {
-            res.status(400).json({ error: error.message });
-        }else{
-            res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
+            return res.status(400).json({ error: error.message });
+        } else {
+            return res.status(500).json({ error: 'Ocurrió un error al crear el secreto: ', details: error.message });
         }
 
     }
@@ -38,42 +35,24 @@ exports.getSecret = async (req, res) => {
         const { uuid } = req.params;
         const { password } = req.body;
 
-        const secret = await secretRepository.getSecretByUUID(uuid);
+        const getSecret = new GetSecret();
 
-        if (!secret) {
-            return res.status(404).json({ error: 'Secreto no encontrado.' });
-        }
+        const secret = await getSecret.run({ uuid, password });
 
-        const hashedPassword = secret.getDataValue("password");
-        const passwordMatches = await bcrypt.compare(password, hashedPassword);
-
-        if (!passwordMatches) {
-            return res.status(401).json({ error: 'Contraseña incorrecta.' });
-        }
-
-        const expiration = new Date(secret.getDataValue("expiration"));
-        const currentDate = new Date();
-
-        if (expiration <= currentDate) {
-            await secretRepository.deleteSecret(uuid);
-            return res.status(410).json({ error: 'La fecha de expiracion ha pasado' });
-        }
-
-        const iv = secret.getDataValue("iv");
-        const secretMessage = secret.getDataValue("secret");
-
-        const encryptedData = {
-            iv: iv,
-            encryptedData: secretMessage
-        };
-
-        const decryptedSecret = await encryption.decrypt(encryptedData, password);
-
-        await secretRepository.deleteSecret(uuid);
-
-        res.status(201).json({ secret: decryptedSecret });
+        return res.status(200).json({ secret: secret });
 
     } catch (error) {
-        res.status(500).json({ error: 'Ocurrió un error al solicitar el secreto: ', details: error.message });
+        if (error instanceof InvalidPasswordError) {
+            return res.status(401).json({ error: message });
+        } else if (error instanceof ExpirationError) {
+            return res.status(410).json({ error: message });
+        } else if (error instanceof SecretNotFoundError) {
+            return res.status(404).json({ error: message });
+        } else {
+            return res.status(500).json({
+                error: 'Ocurrió un error al solicitar el secreto: ',
+                details: error.message
+            });
+        }
     }
 }
