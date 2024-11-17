@@ -43,11 +43,11 @@ exports.getSecret = async (req, res) => {
 
     } catch (error) {
         if (error instanceof InvalidPasswordError) {
-            return res.status(401).json({ error: message });
+            return res.status(401).json({ error: error.message });
         } else if (error instanceof ExpirationError) {
-            return res.status(410).json({ error: message });
+            return res.status(410).json({ error: error.message });
         } else if (error instanceof SecretNotFoundError) {
-            return res.status(404).json({ error: message });
+            return res.status(404).json({ error: error.message });
         } else {
             return res.status(500).json({
                 error: 'Ocurrió un error al solicitar el secreto: ',
